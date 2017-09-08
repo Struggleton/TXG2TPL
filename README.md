@@ -10,3 +10,5 @@ An (un)packer for Naruto GNT4's TXG files to a more editable format.
 + TGE for the byte alignment code
 + TheArcadeStriker/Abbock for testing things
 + And someone else? If you're not here, sorry I missed you!
+
+[Download](/release "Download")
