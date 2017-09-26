@@ -43,8 +43,11 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BEReader.cs" />
+    <Compile Include="ImageDataFormat.cs" />
+    <Compile Include="NaturalSortComparer.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Strings.cs" />
     <Compile Include="TPL.cs" />
     <Compile Include="TXG.cs" />
   </ItemGroup>

@@ -11,27 +11,45 @@ namespace TXG2TPL
     {
         static void Main(string[] args)
         {
-            string usage = "Usage:\nTXG2TPL -p <Folder> <Name>.txg\nTXG2TPL -u <Name>";
-            if (args.Length == 3)
+            if (args.Length != 3)
             {
-                using (FileStream fStream = File.OpenWrite(args[2]))
-                {
-                    TXG txg = new TXG(fStream, Directory.GetFiles(args[1]));
-                }
+                Console.WriteLine(Strings.UsageMessage);
+                return;
             }
 
-            else if (args.Length == 2)
+            if (args[0] == "-u")
             {
                 using (FileStream fStream = File.OpenRead(args[1]))
                 {
-                    TXG txg = new TXG(fStream);
+                    if (!Directory.Exists(args[2])) Directory.CreateDirectory(args[2]);
+                    TXG txg = new TXG(fStream, args[2]);
+                    Console.WriteLine(string.Format(Strings.UnpackedMessage, args[1], args[2]));
+                }
+            }
+
+            else if (args[0] == "-p")
+            {
+                if (!Directory.Exists(args[1]))
+                {
+                    Console.WriteLine(Strings.UsageMessage);
+                    return;
+                }
+
+                using (FileStream fStream = File.OpenWrite(args[2]))
+                {
+                    string[] files = Directory.EnumerateFiles(args[1], "*.tpl")
+                                              .AsEnumerable()
+                                              .OrderBy(item => item, new NaturalSortComparer<string>())
+                                               .ToArray();
+                    TXG txg = new TXG(fStream, files);
+                    Console.Write(string.Format(Strings.PackedMessage, args[1], args[2]));
                 }
             }
 
             else
             {
-                Console.WriteLine(usage);
-
+                Console.Write(Strings.UsageMessage);
+                return;
             }
         }
     }

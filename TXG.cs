@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -12,61 +11,27 @@ namespace TXG2TPL
     {
         public uint FileCount;
         public uint[] Offsets;
-        public TXG() { }
-
-        public TXG(Stream stream)
-        {
-            Read(stream);
-        }
 
         public TXG(Stream stream, string[] files)
         {
-            Write(stream, files);
-        }
-        
-        private void Read(Stream stream)
-        {
-            using (BigEndianReader reader = new BigEndianReader(stream))
-            {
-                FileCount = reader.ReadUInt32();
-                Offsets = new uint[FileCount + 1];
-                for (int i = 0; i < FileCount; i++)
-                {
-                    Offsets[i] = reader.ReadUInt32();
-                }
-                Offsets[FileCount] = (uint)reader.BaseStream.Length;
-
-                for (int i = 0; i < FileCount; i++)
-                {
-                    reader.BaseStream.Position = Offsets[i];
-                    TXGHeader TXGHeader = new TXGHeader(reader, Offsets[i + 1]);
-                    MemoryStream mStream = new MemoryStream();
-                    TPL tpl = new TPL(mStream, TXGHeader);
-                    File.WriteAllBytes(string.Format("{0}.tpl", i), mStream.ToArray());
-                }
-            }
-        }
-
-        private void Write(Stream stream, string[] files)
-        {
             using (BigEndianWriter writer = new BigEndianWriter(stream))
             {
+                
                 writer.Write(files.Length);
+                Offsets = new uint[files.Length];
                 for (int i = 0; i < files.Length; i++)
                 {
                     writer.Write(0);
                 }
-
                 writer.AlignPosition(0x20, 0xFF);
-                Offsets = new uint[files.Length];
+
                 for (int i = 0; i < files.Length; i++)
                 {
+                    Console.WriteLine(files[i]);
                     using (FileStream fStream = File.OpenRead(files[i]))
                     {
                         Offsets[i] = (uint)writer.BaseStream.Position;
-                        TPL tpl = new TPL(fStream);
-                        TXGHeader header = new TXGHeader(writer, tpl);
-                        writer.AlignPosition(0x20);
+                        TXGHeader txg = new TXGHeader(writer, new TPL(fStream));
                     }
                 }
 
@@ -74,6 +39,30 @@ namespace TXG2TPL
                 for (int i = 0; i < files.Length; i++)
                 {
                     writer.Write(Offsets[i]);
+                }
+            }
+            
+        }
+
+        public TXG(Stream stream, string outputDir)
+        {
+            using (BigEndianReader reader = new BigEndianReader(stream))
+            {
+                FileCount = reader.ReadUInt32();
+                Offsets = new uint[FileCount];
+                for (int i = 0; i < FileCount; i++)
+                {
+                    Offsets[i] = reader.ReadUInt32();
+                }
+
+                for (int i = 0; i < FileCount; i++)
+                {
+                    reader.BaseStream.Position = Offsets[i];
+                    TXGHeader header = new TXGHeader(reader);
+                    string fileName = Path.Combine(outputDir, i + ".tpl");
+                    MemoryStream mStream = new MemoryStream();
+                    TPL tpl = new TPL(header, mStream);
+                    File.WriteAllBytes(fileName, mStream.ToArray());
                 }
             }
         }
@@ -86,75 +75,90 @@ namespace TXG2TPL
         public uint PaletteFormat;
         public uint Width;
         public uint Height;
-        public uint PaletteEntry;
-        public uint DataOffset;
-        public uint PaletteOffset;
-        public byte[] ImageData;
-        public byte[] PaletteData;
+        public uint unk_0x14;
+        public uint[] ImageOffsets;
+        public uint[] PaletteOffsets;
 
-        public TXGHeader() { }
-
-        public TXGHeader(BigEndianReader reader, uint TXGOffset)
-        {
-            Read(reader, TXGOffset);
-        }
+        public byte[][] ImageData;
+        public byte[][] PaletteData;
+        public ImageDataFormat _Format;
 
         public TXGHeader(BigEndianWriter writer, TPL tpl)
         {
-            Write(writer, tpl);
-        }
-
-        private void Write(BigEndianWriter writer, TPL tpl)
-        {
-            if (tpl.ImageCount != 1)
-                throw new InvalidDataException("Only one TPL image is supported at this time!");
             writer.Write(tpl.ImageCount);
             writer.Write(tpl.ImageFormat);
             writer.Write(tpl.PaletteFormat);
             writer.Write((uint)tpl.Width);
             writer.Write((uint)tpl.Height);
-            writer.Write(0);
-            if (tpl.PaletteOffset != 0)
-            {
-                writer.Seek(-4, SeekOrigin.Current);
-                writer.Write(1); // PaletteEntry?
-            }
-                
-            long DataCurr = writer.BaseStream.Position;
-            writer.Write(0);
-            writer.Write(0xFFFFFFFF);
-            writer.AlignPosition(0x20);
+            writer.Write(1);
 
-            writer.Write(DataCurr, (uint)writer.BaseStream.Position);
-            writer.Write(tpl.ImageData);
+            ImageOffsets = new uint[tpl.ImageCount];
+            PaletteOffsets = new uint[tpl.ImageCount];
 
-            if (tpl.PaletteOffset != 0)
+            long PastOffset = writer.BaseStream.Position;
+            for (int i = 0; i < tpl.ImageData.Length; i++)
             {
-                writer.Write(DataCurr + 4, (uint)writer.BaseStream.Position);
-                writer.Write(tpl.PaletteData);
+                writer.Write(0);
             }
+
+            for (int i = 0; i < tpl.PaletteData.Length; i++)
+            {
+                writer.Write(0);
+            }
+            writer.AlignPosition(0x20, 0xFF);
+
+            for (int i = 0; i < tpl.ImageData.Length; i++)
+            {
+                ImageOffsets[i] = (uint)writer.BaseStream.Position;
+                writer.Write(tpl.ImageData[i]);
+            }
+
+            for (int i = 0; i < tpl.PaletteData.Length; i++)
+            {
+                PaletteOffsets[i] = (uint)writer.BaseStream.Position;
+                writer.Write(tpl.PaletteData[i]);
+            }
+
+            long CurrentOffset = writer.BaseStream.Position;
+            writer.BaseStream.Position = PastOffset;
+
+            for (int i = 0; i < tpl.ImageData.Length; i++)
+            {
+                writer.Write(ImageOffsets[i]);
+            }
+
+            for (int i = 0; i < tpl.PaletteData.Length; i++)
+            {
+                writer.Write(PaletteOffsets[i]);
+            }
+            writer.BaseStream.Position = CurrentOffset;
         }
 
-        private void Read(BigEndianReader reader, uint Offset)
+        public TXGHeader(BigEndianReader reader)
         {
             ImageCount = reader.ReadUInt32();
             ImageFormat = reader.ReadUInt32();
             PaletteFormat = reader.ReadUInt32();
             Width = reader.ReadUInt32();
             Height = reader.ReadUInt32();
-            PaletteEntry = reader.ReadUInt32();
-            DataOffset = reader.ReadUInt32();
-            PaletteOffset = reader.ReadUInt32();
+            unk_0x14 = reader.ReadUInt32();
+            _Format = ImageDataFormat.GetFormat((int)ImageFormat);
 
-            if (PaletteEntry == 1)
+            ImageData = new byte[ImageCount][];
+            PaletteData = new byte[ImageCount][];
+
+            for (int i = 0; i < ImageCount; i++)
             {
-                ImageData = reader.ReadBytes((int)(PaletteOffset - DataOffset));
-                PaletteData = reader.ReadBytes((int)(Offset - PaletteOffset));
+                int ImageSize = _Format.CalculateDataSize((int)Width, (int)Height);
+                ImageData[i] = reader.ReadBytes(ImageSize, (int)reader.ReadUInt32());
             }
 
-            else
+            if (_Format.HasPalette)
             {
-                ImageData = reader.ReadBytes((int)(Offset - DataOffset));
+                for (int i = 0; i < ImageCount; i++)
+                {
+                    PaletteData[i] = reader.ReadBytes(0x200, (int)reader.ReadUInt32());
+                }
             }
         }
     }
