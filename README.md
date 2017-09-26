@@ -2,16 +2,10 @@
 An (un)packer for Naruto GNT4's TXG files to a more editable format.
 
 # Usage
-<<<<<<< HEAD
 + Unpacking: TXG2TPL -u <File Name> <Output Directory>
 + Packing: TXG2TPL -p <Input Directory> <Output File Name>
 
 =======
-```
-+ Creating: TXG2TPL -p [Folder Path] [Output Name].txg
-+ Unpacking: TXG2TPL -u [TXG File].txg
-```
->>>>>>> 000edb7e90fb44ede65f1eb13239a002895298a0
 # Credits
 + Me for writing this
 + TGE for the byte alignment code
