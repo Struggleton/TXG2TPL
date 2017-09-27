@@ -16,7 +16,6 @@ namespace TXG2TPL
         {
             using (BigEndianWriter writer = new BigEndianWriter(stream))
             {
-                
                 writer.Write(files.Length);
                 Offsets = new uint[files.Length];
                 for (int i = 0; i < files.Length; i++)
@@ -27,7 +26,6 @@ namespace TXG2TPL
 
                 for (int i = 0; i < files.Length; i++)
                 {
-                    Console.WriteLine(files[i]);
                     using (FileStream fStream = File.OpenRead(files[i]))
                     {
                         Offsets[i] = (uint)writer.BaseStream.Position;
@@ -58,8 +56,9 @@ namespace TXG2TPL
                 for (int i = 0; i < FileCount; i++)
                 {
                     reader.BaseStream.Position = Offsets[i];
-                    TXGHeader header = new TXGHeader(reader);
                     string fileName = Path.Combine(outputDir, i + ".tpl");
+                    Console.WriteLine(string.Format("File Name: {0}", fileName));
+                    TXGHeader header = new TXGHeader(reader);
                     MemoryStream mStream = new MemoryStream();
                     TPL tpl = new TPL(header, mStream);
                     File.WriteAllBytes(fileName, mStream.ToArray());
@@ -75,7 +74,7 @@ namespace TXG2TPL
         public uint PaletteFormat;
         public uint Width;
         public uint Height;
-        public uint unk_0x14;
+        public uint SingleImage;
         public uint[] ImageOffsets;
         public uint[] PaletteOffsets;
 
@@ -90,7 +89,11 @@ namespace TXG2TPL
             writer.Write(tpl.PaletteFormat);
             writer.Write((uint)tpl.Width);
             writer.Write((uint)tpl.Height);
-            writer.Write(1);
+            if (tpl.ImageCount != 1)
+                writer.Write(0);
+            else
+                writer.Write(1);
+
 
             ImageOffsets = new uint[tpl.ImageCount];
             PaletteOffsets = new uint[tpl.ImageCount];
@@ -141,12 +144,12 @@ namespace TXG2TPL
             PaletteFormat = reader.ReadUInt32();
             Width = reader.ReadUInt32();
             Height = reader.ReadUInt32();
-            unk_0x14 = reader.ReadUInt32();
+            SingleImage = reader.ReadUInt32();
             _Format = ImageDataFormat.GetFormat((int)ImageFormat);
 
             ImageData = new byte[ImageCount][];
             PaletteData = new byte[ImageCount][];
-
+            Console.WriteLine(string.Format(Strings.TXGMessage, ImageCount, ImageFormat, PaletteFormat, Width, Height, Convert.ToBoolean(SingleImage)));
             for (int i = 0; i < ImageCount; i++)
             {
                 int ImageSize = _Format.CalculateDataSize((int)Width, (int)Height);
