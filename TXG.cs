@@ -116,11 +116,15 @@ namespace TXG2TPL
                 writer.Write(tpl.ImageData[i]);
             }
 
-            for (int i = 0; i < tpl.PaletteData.Length; i++)
+            try
             {
-                PaletteOffsets[i] = (uint)writer.BaseStream.Position;
-                writer.Write(tpl.PaletteData[i]);
+                for (int i = 0; i < tpl.PaletteData.Length; i++)
+                {
+                    PaletteOffsets[i] = (uint)writer.BaseStream.Position;
+                    writer.Write(tpl.PaletteData[i]);
+                }
             }
+            catch (ArgumentNullException ane) { }
 
             long CurrentOffset = writer.BaseStream.Position;
             writer.BaseStream.Position = PastOffset;
