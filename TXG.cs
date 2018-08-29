@@ -164,7 +164,18 @@ namespace TXG2TPL
             {
                 for (int i = 0; i < ImageCount; i++)
                 {
-                    PaletteData[i] = reader.ReadBytes(0x200, (int)reader.ReadUInt32());
+                    int palleteLength = (int)reader.ReadUInt32();
+                    if (palleteLength != -1)
+                    {
+                        PaletteData[i] = reader.ReadBytes(0x200, palleteLength);
+                    }
+                    else
+                    {
+                        // Use previous image's palette
+                        int previousPaletteLength = PaletteData[i - 1].Length;
+                        PaletteData[i] = new byte[previousPaletteLength];
+                        Array.Copy(PaletteData[i - 1], PaletteData[i], previousPaletteLength);
+                    }
                 }
             }
         }
