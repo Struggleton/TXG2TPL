@@ -13,6 +13,6 @@ An (un)packer for Naruto GNT4's TXG files to a more editable format.
 + Justin Jones/James McCormack for NaturalSortCompare: http://zootfroot.blogspot.com/2009/09/natural-sort-compare-with-linq-orderby.html
 + Chadderz for the ImageDataFormat idea
 + TheArcadeStriker/Abbock for testing things
-+ Sophie-bear/NicholasMoser for fixing palette
++ Sophie-bear/NicholasMoser for fixing palettes
 
 [Download](/release "Download")
